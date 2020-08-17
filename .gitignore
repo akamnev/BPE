@@ -5,6 +5,7 @@ __pycache__/
 i
 # C extensions
 *.so
+/py/bpe.cpp
 
 # Distribution / packaging
 .Python

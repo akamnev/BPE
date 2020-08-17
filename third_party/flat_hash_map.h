@@ -1,4 +1,4 @@
-//          Copyright Malte Skarupke 2017.
+//          Copyright Malte tokenizerrupke 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See http://www.boost.org/LICENSE_1_0.txt)
 
@@ -14,12 +14,12 @@
 #include <type_traits>
 
 #ifdef _MSC_VER
-#define SKA_NOINLINE(...) __declspec(noinline) __VA_ARGS__
+#define tokenizer_NOINLINE(...) __declspec(noinline) __VA_ARGS__
 #else
-#define SKA_NOINLINE(...) __VA_ARGS__ __attribute__((noinline))
+#define tokenizer_NOINLINE(...) __VA_ARGS__ __attribute__((noinline))
 #endif
 
-namespace vkcom
+namespace tokenizer
 {
     struct prime_number_hash_policy;
     struct power_of_two_hash_policy;
@@ -827,7 +827,7 @@ namespace vkcom
             }
 
             template<typename Key, typename... Args>
-            SKA_NOINLINE(std::pair<iterator, bool>) emplace_new_key(int8_t distance_from_desired, EntryPointer current_entry, Key && key, Args &&... args)
+            tokenizer_NOINLINE(std::pair<iterator, bool>) emplace_new_key(int8_t distance_from_desired, EntryPointer current_entry, Key && key, Args &&... args)
             {
                 using std::swap;
                 if (num_slots_minus_one == 0 || distance_from_desired == max_lookups || num_elements + 1 > (num_slots_minus_one + 1) * static_cast<double>(_max_load_factor))
@@ -1496,7 +1496,7 @@ namespace vkcom
     template<typename T>
     struct power_of_two_std_hash : std::hash<T>
     {
-        typedef vkcom::power_of_two_hash_policy hash_policy;
+        typedef tokenizer::power_of_two_hash_policy hash_policy;
     };
 
-} // end namespace vkcom
+} // end namespace tokenizer

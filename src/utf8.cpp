@@ -5,11 +5,12 @@
 #include <vector>
 #include "utils.h"
 
-namespace vkcom {
+namespace tokenizer {
 
 using std::string;
 using std::vector;
 
+// constexpr static uint32_t INVALID_UNICODE = 0x0fffffff;
 
 bool check_byte(char x) { return (static_cast<uint8_t>(x) & 0xc0u) == 0x80u; }
 
@@ -131,4 +132,4 @@ vector<uint32_t> decode_utf8(const string& utf8_text) {
   return decode_utf8(utf8_text.data(), utf8_text.data() + utf8_text.size());
 }
 
-}  // namespace vkcom
+}  // namespace tokenizer

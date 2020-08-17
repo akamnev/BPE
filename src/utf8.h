@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-namespace vkcom {
+namespace tokenizer {
 
 constexpr static uint32_t INVALID_UNICODE = 0x0fffffff;
 
@@ -14,10 +14,7 @@ std::vector<uint32_t> decode_utf8(const char *begin, const char *end);
 
 std::vector<uint32_t> decode_utf8(const std::string &utf8_text);
 
-
-
-
-} // namespace vkcom
+} // namespace tokenizer
 
 
 
