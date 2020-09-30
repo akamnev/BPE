@@ -110,15 +110,11 @@ cdef class BPE:
             if not status.ok():
                 raise ValueError(status.message.decode())
             assert len(ret_ids) == len(ret_ends)
-            if len(ret_ids) == 1:
-                return ret_ids[0], ret_ends[0]
             return ret_ids, ret_ends
         elif output_type == OutputType.SUBWORD:
             status = self.encoder.encode_as_subwords(w, &ret_subwords, dropout_prob)
             if not status.ok():
                 raise ValueError(status.message.decode())
-            if len(ret_subwords) == 1:
-                return [piece.decode() for piece in ret_subwords[0]]
             return [[piece.decode() for piece in word] for word in ret_subwords]
         else:
             raise ValueError('output_type must be equal to "OutputType.ID" or '
