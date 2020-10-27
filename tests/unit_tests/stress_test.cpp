@@ -7,14 +7,14 @@
 #include <random>
 #include "stress_test.h"
 
-#include "../../youtokentome/cpp/utils.h"
-#include "../../youtokentome/cpp/bpe.h"
-#include "../../youtokentome/cpp/utf8.h"
+#include "../../src/utils.h"
+#include "../../src/bpe.h"
+#include "../../src/utf8.h"
 
 #include <chrono>
 #include <thread>
 
-namespace vkcom {
+namespace tokenizer {
 using namespace std;
 
 extern int alive_tokens;
@@ -45,18 +45,34 @@ double uniform_dist_double(mt19937& rnd, double l, double r) {
     return static_cast<double>(rnd() - rnd.min()) / generator_range * (r - l) + l;
 };
 
-BPEState learn_bpe_slow(const string &text_utf8, int n_token, string, BpeConfig bpe_config) {
-  auto row_data = decode_utf8(text_utf8.data(), text_utf8.data() + text_utf8.size());
-  vector<vector<uint32_t>> splited_text;
-  for (auto &ch: row_data) {
-    if (is_space(ch)) {
-      ch = SPACE_TOKEN;
+BPEState learn_bpe_slow(const vector<WordCountStr>& word_count, int n_token, BpeConfig bpe_config) {
+    struct WordCount {
+        vector<uint32_t> word;
+        uint64_t cnt;
+    };
+
+    vector<WordCount> word_cnt;
+    for(auto &it : word_count) {
+        WordCount x = {decode_utf8(it.word), it.count};
+        word_cnt.emplace_back(x);
     }
-  }
-  for (; !row_data.empty() && is_space(row_data.back()); row_data.pop_back());
-  flat_hash_set<uint32_t> removed_chars;
-  auto char2id = compute_alphabet(row_data, removed_chars, bpe_config);
-  remove_rare_chars(row_data, removed_chars);
+
+  vector<vector<uint32_t>> splited_text;
+
+
+    uint64_t total_cnt = 0;
+    flat_hash_map<uint32_t, uint64_t> char_cnt;
+    for (auto &it : word_cnt) {
+        for(auto ch : it.word) {
+            if (!is_space(ch)) {
+                char_cnt[ch] += it.cnt;
+                total_cnt++;
+            }
+        }
+    }
+
+    flat_hash_map<uint32_t, uint32_t> char2id= compute_alphabet_helper(char_cnt, bpe_config);
+  // = compute_alphabet(row_data, removed_chars, bpe_config);
   flat_hash_map<uint32_t, uint32_t> id2char;
   for (auto x: char2id) {
     id2char[x.second] = x.first;
@@ -69,7 +85,7 @@ BPEState learn_bpe_slow(const string &text_utf8, int n_token, string, BpeConfig 
       break;
     }
     splited_text.emplace_back();
-    splited_text.back().push_back(SPACE_TOKEN);
+    // splited_text.back().push_back(SPACE_TOKEN);
     for (; i < (int) row_data.size() && !is_space(row_data[i]); i++) {
       if (char2id.count(row_data[i])) {
         splited_text.back().push_back(row_data[i]);
@@ -168,7 +184,8 @@ BPEState learn_bpe_slow(const string &text_utf8, int n_token, string, BpeConfig 
     }
   }
 
-  BPEState state = {char2id, rules, bpe_config.special_tokens};
+  // BPEState state = {char2id, rules, bpe_config.special_tokens};
+    BPEState state;
   return state;
 }
 
@@ -182,11 +199,11 @@ DecodeResult decode_slow(const string &text_utf8, const BaseEncoder &bpe_applyer
   auto text = decode_utf8(text_utf8.data(), text_utf8.data() + text_utf8.size());
   for (auto &ch: text) {
     if (is_space(ch)) {
-      ch = SPACE_TOKEN;
+      // ch = SPACE_TOKEN;
     }
   }
 
-  for (; !text.empty() && text.back() == SPACE_TOKEN; text.pop_back());
+  // for (; !text.empty() && text.back() == SPACE_TOKEN; text.pop_back());
 
   struct Node {
     uint32_t val;
@@ -201,7 +218,7 @@ DecodeResult decode_slow(const string &text_utf8, const BaseEncoder &bpe_applyer
     }
 
     words.emplace_back();
-    words.back().push_back({char2id.at(SPACE_TOKEN), {}});
+    // words.back().push_back({char2id.at(SPACE_TOKEN), {}});
     for (; i < (int) text.size() && !is_space(text[i]);) {
 
       if (char2id.count(text[i]) == 0) {
@@ -297,13 +314,13 @@ void manual_test() {
   int n_tokens = 2 + 2 + 5;
 
   auto trn_data_copy = trn_data;
-  SpecialTokens special_tokens_config = {0, 1, 2, 3};
-  BpeConfig bpe_config = {1.0, 1, special_tokens_config};
+  SpecialTokens special_tokens_config = {};
+  BpeConfig bpe_config = {1, 0, special_tokens_config};
 
   BPEState model_fast;
-  status = learn_bpe_from_string(trn_data_copy, n_tokens, "remove_it.txt", bpe_config, &model_fast);
+  // status = learn_bpe_from_string(trn_data_copy, n_tokens, "remove_it.txt", bpe_config, &model_fast);
   assert(status.ok());
-  auto model_slow = learn_bpe_slow(trn_data, n_tokens, "remove_it.txt", bpe_config);
+  auto model_slow = learn_bpe_slow(trn_data, n_tokens, bpe_config);
   assert(model_fast.rules == model_slow.rules);
   assert(model_fast.char2id == model_slow.char2id);
 
@@ -348,9 +365,9 @@ void parallel_test(int n_iter, int n_threads) {
     }
 
     auto train_data_copy = train_data;
-    BpeConfig bpe_config = {character_coverage, n_threads, {0, 1, 2, 3}};
+    BpeConfig bpe_config = {n_threads, 0, {}};
     BPEState learned_model;
-    status = learn_bpe_from_string(train_data_copy, vocab_size, "remove_it.txt", bpe_config, &learned_model);
+    // status = learn_bpe_from_string(train_data_copy, vocab_size, "remove_it.txt", bpe_config, &learned_model);
     assert(status.ok());
     BaseEncoder applyer(learned_model, 20);
 
@@ -386,16 +403,13 @@ void base_stress(int n_iter) {
     cerr << "train_data: !" << train_data << "! (vocab_size, len): (" << vocab_size << ", " << train_data.size()
          << ")" << endl;
 
-    double character_coverage = 1 - uniform_dist_double(rnd, 0, 1) * 0.4;
-    if (uniform_dist_int(rnd, 0, 2) == 0) {
-      character_coverage = 1;
-    }
+    for (; !train_data.empty() && is_space(train_data.back()); train_data.pop_back());
     auto train_data_copy = train_data;
-    BpeConfig bpe_config = {character_coverage, n_threads, {0, 1, 2, 3}};
+    BpeConfig bpe_config = {n_threads, 0, {}};
     BPEState fast_solution_model;
-    status = learn_bpe_from_string(train_data_copy, vocab_size, "remove_it.txt", bpe_config, &fast_solution_model);
+    // status = learn_bpe_from_string(train_data_copy, vocab_size, "remove_it.txt", bpe_config, &fast_solution_model);
     assert(status.ok());
-    auto slow_solution_model = learn_bpe_slow(train_data, vocab_size, "remove_it.txt", bpe_config);
+    auto slow_solution_model = learn_bpe_slow(train_data, vocab_size, bpe_config);
 
     if (fast_solution_model.rules != slow_solution_model.rules
         || fast_solution_model.char2id != slow_solution_model.char2id) {
@@ -475,21 +489,21 @@ void base_stress(int n_iter) {
 
 int main(int argc, char **argv) {
   if (argc == 1) {
-    vkcom::base_stress(-1);
+    tokenizer::base_stress(-1);
   } else {
     int n_iter;
     if (std::string(argv[1]) == "manual") {
-      vkcom::manual_test();
+        tokenizer::manual_test();
       return 0;
     }
     if (std::string(argv[1]) == "parallel") {
       sscanf(argv[2], "%d", &n_iter);
-      vkcom::parallel_test(n_iter, 8);
+        tokenizer::parallel_test(n_iter, 8);
       return 0;
     }
     if (std::string(argv[1]) == "base") {
       sscanf(argv[2], "%d", &n_iter);
-      vkcom::base_stress(n_iter);
+        tokenizer::base_stress(n_iter);
       return 0;
     }
     assert(false);

@@ -1,30 +1,30 @@
-# -*- coding: utf-8 -*-
 import os
+import pybpe
 
-import youtokentome as yttm
+
+def count_words(text):
+    word_count = {}
+    for word in text.split():
+        try:
+            word_count[word] += 1
+        except KeyError:
+            word_count[word] = 1
+    word_count = sorted([(k, v) for k, v in word_count.items()],
+                        key=lambda x: x[1])
+    return word_count
 
 
 def test_russian():
-    train_text = """
-        собирать cборник сборище отобранный сборщица 
-        """
-
-    test_text = """
-        собранный собрание прибор
-        """
-
-    TRAIN_DATA_PATH = "train_data.txt"
-    MODEL_PATH = "model.yttm"
-    with open(TRAIN_DATA_PATH, "w") as fin:
-        fin.write(train_text)
-    model = yttm.BPE.train(TRAIN_DATA_PATH, MODEL_PATH, 50)
-    tokenized_text = model.encode([test_text], output_type=yttm.OutputType.SUBWORD)
-    expected_result = [
-        ["▁с", "обранный", "▁с", "об", "ран", "и", "е", "▁", "п", "р", "и", "бор"]
-    ]
+    train_text = "собирать cборник сборище отобранный сборщица"
+    test_text = "собранный собрание прибор"
+    wc = count_words(train_text)
+    model = pybpe.BPE.train(wc, 50)
+    bpe = pybpe.BPE(model)
+    tokenized_text = bpe.encode(test_text.split(),
+                                output_type=pybpe.OutputType.SUBWORD)
+    expected_result = [["с", "обранный"], ["с", "об", "ран", "и", "е"],
+                       ["п", "р", "и", "бор"]]
     assert tokenized_text == expected_result
-    print(tokenized_text)
-    os.remove(TRAIN_DATA_PATH)
 
 
 def test_english():
@@ -40,16 +40,12 @@ def test_english():
 
     test_text = "chronocline synchroscope "
 
-    TRAIN_DATA_PATH = "train_data.txt"
-    MODEL_PATH = "model.yttm"
-    with open(TRAIN_DATA_PATH, "w") as fin:
-        fin.write(train_text)
-    model = yttm.BPE.train(TRAIN_DATA_PATH, MODEL_PATH, 200, n_threads=1)
-    tokenized_text = model.encode([test_text], output_type=yttm.OutputType.SUBWORD)
-    expected_result = [['▁chrono', 'c', 'l', 'i', 'n', 'e', '▁', 'sy', 'n', 'ch', 'r', 'o', 's', 'co', 'p', 'e']]
+    wc = count_words(train_text)
+    model = pybpe.BPE.train(wc, 200)
+    bpe = pybpe.BPE(model)
+    tokenized_text = bpe.encode(test_text.split(), output_type=pybpe.OutputType.SUBWORD)
+    expected_result = [['chrono', 'c', 'l', 'i', 'n', 'e'], ['s', 'y', 'n', 'ch', 'r', 'o', 's', 'co', 'p', 'e']]
     assert tokenized_text == expected_result
-    print(tokenized_text)
-    os.remove(TRAIN_DATA_PATH)
 
 
 def test_japanese():
@@ -63,13 +59,9 @@ def test_japanese():
         まい日（にち） やさしく いい あって でかけます 
     """
     test_text = " おばあさん が  川 で せん "
-    TRAIN_DATA_PATH = "train_data.txt"
-    MODEL_PATH = "model.yttm"
-    with open(TRAIN_DATA_PATH, "w") as fin:
-        fin.write(train_text)
-    model = yttm.BPE.train(TRAIN_DATA_PATH, MODEL_PATH, 100)
-    tokenized_text = model.encode([test_text], output_type=yttm.OutputType.SUBWORD)
-    expected_result = [["▁おばあさん", "▁が", "▁", "川", "▁", "で", "▁", "せ", "ん"]]
+    wc = count_words(train_text)
+    model = pybpe.BPE.train(wc, 100)
+    bpe = pybpe.BPE(model)
+    tokenized_text = bpe.encode(test_text.split(), output_type=pybpe.OutputType.SUBWORD)
+    expected_result = [["おばあさん"], ["が"],  ["川"], ["で"], ["せ", "ん"]]
     assert tokenized_text == expected_result
-    print(tokenized_text)
-    os.remove(TRAIN_DATA_PATH)
